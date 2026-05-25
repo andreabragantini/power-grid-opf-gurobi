@@ -221,5 +221,6 @@ __marimo__/
 # gurobi
 gurobi.log
 
-# project metadata files
+# project outputs metadata files
+outputs/*
 outputs/kpi_history.csv
