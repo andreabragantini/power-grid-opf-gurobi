@@ -1,0 +1,2 @@
+timestamp_utc,case_name,formulation,status,objective_value,num_constraints,num_variables,num_buses,num_lines,num_generators,num_windfarms,total_generation_mw,total_wind_mw,total_load_mw,net_supply_minus_load_mw
+2026-05-25T19:20:02,IEEE_118bus,dc_opf,2,84840.00000000012,1020,358,118,186,54,0,4242.000000000006,0.0,4242.0,6.366462912410498e-12
