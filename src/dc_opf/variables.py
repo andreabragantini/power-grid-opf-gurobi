@@ -17,19 +17,19 @@ def build_variables(context):
     nodes = context.data.nodes
 
     # Dispatchable generator active power.
-    variables.Pgen = {
+    variables.p_gen = {
         gen: model.addVar(lb=0.0, name='Pgen({0})'.format(gen))
         for gen in generators
     }
 
     # Non-dispatchable wind active power accepted by OPF.
-    variables.WindOPF = {
+    variables.p_wind = {
         wind: model.addVar(lb=0.0, name='WindOPF({0})'.format(wind))
         for wind in windfarms
     }
 
     # Nodal voltage angles in DC approximation.
-    variables.nodeangle = {
+    variables.theta = {
         node: model.addVar(
             lb=-gb.GRB.INFINITY,
             ub=gb.GRB.INFINITY,
@@ -42,11 +42,11 @@ def build_variables(context):
 
     # Fix all selected slack buses as angular reference.
     for node in context.data.slackbuses:
-        variables.nodeangle[node].lb = 0.0
-        variables.nodeangle[node].ub = 0.0
+        variables.theta[node].lb = 0.0
+        variables.theta[node].ub = 0.0
 
     # Active power flow variable per AC branch.
-    variables.lineflow_AC_OPF = {
+    variables.p_line = {
         line: model.addVar(
             lb=-gb.GRB.INFINITY,
             ub=gb.GRB.INFINITY,
@@ -54,5 +54,11 @@ def build_variables(context):
         )
         for line in context.data.AC_lines
     }
+
+    # Backward-compatible aliases used by legacy wrappers and scripts.
+    variables.Pgen = variables.p_gen
+    variables.WindOPF = variables.p_wind
+    variables.nodeangle = variables.theta
+    variables.lineflow_AC_OPF = variables.p_line
 
     model.update()

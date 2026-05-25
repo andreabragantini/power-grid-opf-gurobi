@@ -12,11 +12,11 @@ def build_power_balance_constraints(context):
 
     for node in context.data.nodes:
         constraints[node] = context.model.addConstr(
-            gb.quicksum(var.WindOPF[w] for w in context.data.Map_N2Ws[node])
-            + gb.quicksum(var.Pgen[g] for g in context.data.Map_N2Gs[node])
+            gb.quicksum(var.p_wind[w] for w in context.data.Map_N2Ws[node])
+            + gb.quicksum(var.p_gen[g] for g in context.data.Map_N2Gs[node])
             == context.data.load.Load[node]
-            + gb.quicksum(var.lineflow_AC_OPF[l] for l in context.data.nodetooutlines[node])
-            - gb.quicksum(var.lineflow_AC_OPF[l] for l in context.data.nodetoinlines[node]),
+            + gb.quicksum(var.p_line[l] for l in context.data.nodetooutlines[node])
+            - gb.quicksum(var.p_line[l] for l in context.data.nodetoinlines[node]),
             name='Power_Balance_OPF({0})'.format(node),
         )
 
@@ -31,7 +31,7 @@ def build_generator_pmax_constraints(context):
 
     for gen in context.data.generators:
         constraints[gen] = context.model.addConstr(
-            variables.Pgen[gen] <= generator_data.capacity[gen],
+            variables.p_gen[gen] <= generator_data.capacity[gen],
             name='Pmax_OPF({0})'.format(gen),
         )
 
@@ -45,7 +45,7 @@ def build_generator_pmin_constraints(context):
 
     for gen in context.data.generators:
         constraints[gen] = context.model.addConstr(
-            variables.Pgen[gen] >= 0.0,
+            variables.p_gen[gen] >= 0.0,
             name='Pmin_OPF({0})'.format(gen),
         )
 
@@ -60,7 +60,7 @@ def build_wind_capacity_constraints(context):
 
     for wind in context.data.windfarms:
         constraints[wind] = context.model.addConstr(
-            variables.WindOPF[wind] <= wind_data.capacity[wind],
+            variables.p_wind[wind] <= wind_data.capacity[wind],
             name='Wind_Max_OPF({0})'.format(wind),
         )
 
@@ -75,10 +75,10 @@ def build_flow_angle_constraints(context):
     for line in context.data.AC_lines:
         from_node, to_node = line
         constraints[line] = context.model.addConstr(
-            variables.lineflow_AC_OPF[line]
+            variables.p_line[line]
             == context.data.Sbase
             * context.data.lineadmittance[line]
-            * (variables.nodeangle[from_node] - variables.nodeangle[to_node]),
+            * (variables.theta[from_node] - variables.theta[to_node]),
             name='Line_flow_definition_OPF{0}'.format(line),
         )
 
@@ -93,11 +93,11 @@ def build_flow_limit_constraints(context):
 
     for line in context.data.AC_lines:
         upper_constraints[line] = context.model.addConstr(
-            variables.lineflow_AC_OPF[line] <= context.data.linelimit[line],
+            variables.p_line[line] <= context.data.linelimit[line],
             name='Line_flow_upper_limit_AC_OPF{0}'.format(line),
         )
         lower_constraints[line] = context.model.addConstr(
-            variables.lineflow_AC_OPF[line] >= -context.data.linelimit[line],
+            variables.p_line[line] >= -context.data.linelimit[line],
             name='Line_flow_lower_limit_AC_OPF{0}'.format(line),
         )
 
@@ -112,11 +112,11 @@ def build_angle_limit_constraints(context):
 
     for node in context.data.nodes:
         upper_constraints[node] = context.model.addConstr(
-            variables.nodeangle[node] <= math.pi,
+            variables.theta[node] <= math.pi,
             name='Angle_lim_upper{0}'.format(node),
         )
         lower_constraints[node] = context.model.addConstr(
-            variables.nodeangle[node] >= -math.pi,
+            variables.theta[node] >= -math.pi,
             name='Angle_lim_lower{0}'.format(node),
         )
 

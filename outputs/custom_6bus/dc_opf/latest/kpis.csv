@@ -1,2 +1,2 @@
-timestamp_utc,case_name,formulation,status,objective_value,num_constraints,num_variables,num_buses,num_lines,num_generators,num_windfarms,total_generation_mw,total_wind_mw,total_load_mw,net_supply_minus_load_mw
-2026-05-25T19:20:01,custom_6bus,dc_opf,2,10900.0,56,21,6,9,5,1,650.0,0.0,650.0,0.0
+timestamp_utc,case_name,formulation,status,status_label,converged,objective_value,num_constraints,num_variables,num_buses,num_lines,num_generators,num_windfarms,total_generation_mw,total_wind_mw,total_load_mw,total_generation_capacity_mw,capacity_margin_mw,likely_issue,net_supply_minus_load_mw
+2026-05-25T19:46:39,custom_6bus,dc_opf,2,Converged (Optimal),True,10900.0,56,21,6,9,5,1,650.0,0.0,650.0,1400.0,750.0,,0.0

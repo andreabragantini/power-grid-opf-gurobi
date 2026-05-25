@@ -34,8 +34,6 @@ power-grid-opf-gurobi/
 
 ## Reproducible setup
 
-## Reproducible setup
-
 This repository has been developed in a local conda environment with Python 3.10.
 
 ### 1. Create and activate the environment
@@ -77,7 +75,14 @@ python main.py
 
 ### 5. Select case and formulation
 
-The runtime supports case and formulation selection via environment variables.
+You can choose case and formulation directly from CLI:
+
+```bash
+python main.py --list-cases
+python main.py --case custom_6bus --formulation dc_opf
+```
+
+Environment variables are also supported:
 
 ```bash
 # Windows PowerShell example
@@ -117,17 +122,13 @@ Simulation outputs are now saved under `outputs/` for quick inspection.
 
 Per run, the repository writes:
 
-- `outputs/<case>/<formulation>/<run_id>/index.html` (landing page)
-- `outputs/<case>/<formulation>/<run_id>/tables/*.csv` (result tables)
-- `outputs/<case>/<formulation>/<run_id>/plots/network_assets.html`
-- `outputs/<case>/<formulation>/<run_id>/plots/network_results_heatmap.html`
-- `outputs/<case>/<formulation>/<run_id>/kpis.csv`
+- `outputs/<case>/<formulation>/latest/index.html` (landing page)
+- `outputs/<case>/<formulation>/latest/tables/*.csv` (result tables)
+- `outputs/<case>/<formulation>/latest/plots/network_assets.html`
+- `outputs/<case>/<formulation>/latest/plots/network_results_heatmap.html`
+- `outputs/<case>/<formulation>/latest/kpis.csv`
 
-Cross-run KPI tracking is appended to:
-
-- `outputs/kpi_history.csv`
-
-This enables case-to-case comparison and benchmark baselining without parsing console logs.
+The `latest` folder is overwritten on each run for that case/formulation.
 
 ## Notes
 

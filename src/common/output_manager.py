@@ -4,18 +4,15 @@ This module centralizes where and how simulation outputs are stored so users can
 inspect results quickly without relying on console logs.
 """
 
-from datetime import datetime
 from pathlib import Path
 import os
+import shutil
+
+from datetime import datetime
 
 import pandas as pd
 
 import defaults
-
-
-def _build_run_id():
-    """Build a UTC timestamp-based run identifier."""
-    return datetime.utcnow().strftime('%Y%m%d_%H%M%S')
 
 
 def prepare_output_paths(formulation_name):
@@ -30,18 +27,23 @@ def prepare_output_paths(formulation_name):
     defaults.refresh_from_env()
 
     output_root = Path(os.getenv('OPF_OUTPUT_ROOT', 'outputs'))
-    run_id = _build_run_id()
-
-    run_dir = output_root / defaults.CASE_NAME / formulation_name / run_id
+    legacy_kpi_history = output_root / 'kpi_history.csv'
+    if legacy_kpi_history.exists():
+        legacy_kpi_history.unlink()
+    # Use a fixed location per case/formulation so each new run overwrites old artifacts.
+    run_dir = output_root / defaults.CASE_NAME / formulation_name / 'latest'
     tables_dir = run_dir / 'tables'
     plots_dir = run_dir / 'plots'
+
+    if run_dir.exists():
+        shutil.rmtree(run_dir)
 
     tables_dir.mkdir(parents=True, exist_ok=True)
     plots_dir.mkdir(parents=True, exist_ok=True)
 
     return {
         'output_root': output_root,
-        'run_id': run_id,
+        'run_id': 'latest',
         'run_dir': run_dir,
         'tables_dir': tables_dir,
         'plots_dir': plots_dir,
@@ -55,8 +57,8 @@ def _write_table(df, path):
 
 def compute_kpis(context, formulation_name):
     """Compute simulation KPI values for fast cross-case comparison."""
-    total_gen = float(context.results.Pgen['Pgen'].sum()) if not context.results.Pgen.empty else 0.0
-    total_wind = float(context.results.WindOPF['WindGen'].sum()) if not context.results.WindOPF.empty else 0.0
+    total_gen = float(pd.to_numeric(context.results.p_gen['p_gen_mw'], errors='coerce').fillna(0.0).sum()) if not context.results.p_gen.empty else 0.0
+    total_wind = float(pd.to_numeric(context.results.p_wind['p_wind_mw'], errors='coerce').fillna(0.0).sum()) if not context.results.p_wind.empty else 0.0
     total_load = float(context.data.load['Load'].sum()) if hasattr(context.data, 'load') else 0.0
 
     return {
@@ -64,6 +66,8 @@ def compute_kpis(context, formulation_name):
         'case_name': defaults.CASE_NAME,
         'formulation': formulation_name,
         'status': context.results.metadata.get('status'),
+        'status_label': context.results.metadata.get('status_label'),
+        'converged': context.results.metadata.get('converged'),
         'objective_value': context.results.metadata.get('objective_value'),
         'num_constraints': context.results.metadata.get('num_constraints'),
         'num_variables': context.results.metadata.get('num_variables'),
@@ -74,28 +78,23 @@ def compute_kpis(context, formulation_name):
         'total_generation_mw': total_gen,
         'total_wind_mw': total_wind,
         'total_load_mw': total_load,
+        'total_generation_capacity_mw': context.results.metadata.get('total_generation_capacity_mw'),
+        'capacity_margin_mw': context.results.metadata.get('capacity_margin_mw'),
+        'likely_issue': context.results.metadata.get('likely_issue'),
         'net_supply_minus_load_mw': (total_gen + total_wind - total_load),
     }
 
 
 def save_results_bundle(context, formulation_name, paths, plot_paths):
     """Persist tables, KPI files, and run index for one OPF simulation."""
-    _write_table(context.results.Pgen, paths['tables_dir'] / 'pgen.csv')
-    _write_table(context.results.WindOPF, paths['tables_dir'] / 'wind.csv')
-    _write_table(context.results.lineflow_AC_OPF, paths['tables_dir'] / 'lineflow.csv')
-    _write_table(context.results.nodeangle, paths['tables_dir'] / 'nodeangle.csv')
+    _write_table(context.results.p_gen, paths['tables_dir'] / 'p_gen.csv')
+    _write_table(context.results.p_wind, paths['tables_dir'] / 'p_wind.csv')
+    _write_table(context.results.p_line, paths['tables_dir'] / 'p_line.csv')
+    _write_table(context.results.theta, paths['tables_dir'] / 'theta.csv')
 
     kpis = compute_kpis(context, formulation_name)
     kpi_df = pd.DataFrame([kpis])
     kpi_df.to_csv(paths['run_dir'] / 'kpis.csv', index=False)
-
-    kpi_history_path = paths['output_root'] / 'kpi_history.csv'
-    if kpi_history_path.exists():
-        history_df = pd.read_csv(kpi_history_path)
-        history_df = pd.concat([history_df, kpi_df], ignore_index=True)
-    else:
-        history_df = kpi_df
-    history_df.to_csv(kpi_history_path, index=False)
 
     _write_run_index(paths, kpis, plot_paths)
 
@@ -108,6 +107,10 @@ def _write_run_index(paths, kpis, plot_paths):
         '<tr><td>{0}</td><td>{1}</td></tr>'.format(key, value)
         for key, value in kpis.items()
     )
+
+    status_label = kpis.get('status_label', kpis.get('status'))
+    converged_text = 'YES' if kpis.get('converged') else 'NO'
+    likely_issue = kpis.get('likely_issue') or 'No additional diagnostic message.'
 
     content = """<!doctype html>
 <html>
@@ -124,12 +127,20 @@ def _write_run_index(paths, kpis, plot_paths):
   </style>
 </head>
 <body>
-  <h1>OPF Simulation Summary</h1>
+    <h1>OPF Simulation Summary (Latest Run)</h1>
+    <h2>Convergence</h2>
+    <table>
+        <tbody>
+            <tr><td>Converged</td><td>{converged_text}</td></tr>
+            <tr><td>Status</td><td>{status_label}</td></tr>
+            <tr><td>Diagnostic</td><td>{likely_issue}</td></tr>
+        </tbody>
+    </table>
   <div class=\"links\">
-    <a href=\"tables/pgen.csv\">Generator dispatch table</a>
-    <a href=\"tables/wind.csv\">Wind dispatch table</a>
-    <a href=\"tables/lineflow.csv\">Line flow table</a>
-    <a href=\"tables/nodeangle.csv\">Voltage angle table</a>
+        <a href=\"tables/p_gen.csv\">Generator dispatch table</a>
+        <a href=\"tables/p_wind.csv\">Wind dispatch table</a>
+        <a href=\"tables/p_line.csv\">Line flow table</a>
+        <a href=\"tables/theta.csv\">Voltage angle table</a>
     <a href=\"{assets_plot}\">Network connectivity plot</a>
     <a href=\"{heatmap_plot}\">Network OPF heatmap plot</a>
   </div>
@@ -142,6 +153,9 @@ def _write_run_index(paths, kpis, plot_paths):
 </body>
 </html>
 """.format(
+    converged_text=converged_text,
+    status_label=status_label,
+    likely_issue=likely_issue,
         assets_plot=plot_paths['assets_plot'].name,
         heatmap_plot=plot_paths['heatmap_plot'].name,
         rows=rows_html,

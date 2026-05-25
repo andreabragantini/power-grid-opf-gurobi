@@ -9,6 +9,6 @@ def build_objective(context):
     generator_data = context.data.generatorinfo
 
     context.model.setObjective(
-        gb.quicksum(generator_data.lincost[g] * context.variables.Pgen[g] for g in generators),
+        gb.quicksum(generator_data.lincost[g] * context.variables.p_gen[g] for g in generators),
         gb.GRB.MINIMIZE,
     )

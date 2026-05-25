@@ -13,6 +13,11 @@ import pandas as pd
 import defaults
 
 
+def _read_csv_auto(path):
+    """Read CSV with automatic delimiter detection (comma/semicolon/tab)."""
+    return pd.read_csv(path, sep=None, engine='python')
+
+
 def _first_existing_column(df, candidates, frame_name, required=True):
     """Return the first column from candidates found in a DataFrame.
 
@@ -67,7 +72,7 @@ def load_network_data(context):
     # Re-read environment-driven paths to support multi-case runs in one process.
     defaults.refresh_from_env()
 
-    raw_nodedf = pd.read_csv(defaults.nodefile)
+    raw_nodedf = _read_csv_auto(defaults.nodefile)
 
     node_id_col = _first_existing_column(raw_nodedf, ['ID', 'Bus_Number'], 'buses.csv')
     node_name_col = _first_existing_column(raw_nodedf, ['name', 'Bus_Name'], 'buses.csv', required=False)
@@ -88,7 +93,7 @@ def load_network_data(context):
     nodedf = nodedf.rename(columns={node_id_col: 'ID'})
     context.data.nodedf = nodedf.set_index('ID')
 
-    raw_linedf = pd.read_csv(defaults.linefile)
+    raw_linedf = _read_csv_auto(defaults.linefile)
     from_col = _first_existing_column(raw_linedf, ['fromNode', 'From_Bus'], 'branches.csv')
     to_col = _first_existing_column(raw_linedf, ['toNode', 'To_Bus'], 'branches.csv')
     limit_col = _first_existing_column(raw_linedf, ['limit', 'Alimit', 'RateA_MVA'], 'branches.csv', required=False)
@@ -140,11 +145,12 @@ def load_network_data(context):
     context.data.AC_lines = [line for line, line_type in zip(context.data.lineorder, line_types) if line_type == 'AC']
 
     context.data.Sbase = _read_optional_base_mva()
+    context.data.case_name = defaults.CASE_NAME
 
 
 def load_generator_data(context):
     """Load generator records and build generator-node mappings."""
-    raw_gendf = pd.read_csv(defaults.generatorfile)
+    raw_gendf = _read_csv_auto(defaults.generatorfile)
     gen_id_col = _first_existing_column(raw_gendf, ['ID'], 'generators.csv', required=False)
     origin_col = _first_existing_column(raw_gendf, ['origin', 'Gen_Bus'], 'generators.csv')
     pmax_col = _first_existing_column(raw_gendf, ['Pmax', 'Pmax_MW'], 'generators.csv')
@@ -179,7 +185,14 @@ def load_wind_data(context):
         context.data.Map_W2Ns = defaultdict(list)
         return
 
-    context.data.windinfo = pd.read_csv(defaults.windfarms_file, index_col=0)
+    wind_df = _read_csv_auto(defaults.windfarms_file)
+    wind_index_col = _first_existing_column(
+        wind_df,
+        ['ID', 'id', 'name'],
+        'windfarms.csv',
+        required=False,
+    )
+    context.data.windinfo = wind_df.set_index(wind_index_col or wind_df.columns[0])
     context.data.windfarms = context.data.windinfo.index.tolist()
 
     context.data.Map_N2Ws = defaultdict(list)
@@ -200,6 +213,6 @@ def load_nodal_demand_data(context):
         return
 
     if os.path.exists(defaults.load_file):
-        context.data.load = pd.read_csv(defaults.load_file).set_index('Node')
+        context.data.load = _read_csv_auto(defaults.load_file).set_index('Node')
     else:
         context.data.load = pd.DataFrame({'Load': 0.0}, index=context.data.nodedf.index)
