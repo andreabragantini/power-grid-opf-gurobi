@@ -80,6 +80,7 @@ def compute_kpis(context, formulation_name):
         'total_load_mw': total_load,
         'total_generation_capacity_mw': context.results.metadata.get('total_generation_capacity_mw'),
         'capacity_margin_mw': context.results.metadata.get('capacity_margin_mw'),
+        'load_scaler': context.results.metadata.get('load_scaler'),
         'likely_issue': context.results.metadata.get('likely_issue'),
         'net_supply_minus_load_mw': (total_gen + total_wind - total_load),
     }

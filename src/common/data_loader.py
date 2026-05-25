@@ -205,14 +205,18 @@ def load_wind_data(context):
 
 def load_nodal_demand_data(context):
     """Load nodal demand using bus file fields or legacy load file fallback."""
+    scale = defaults.LOAD_SCALER
+
     if 'load' in context.data.nodedf.columns:
         context.data.load = pd.DataFrame(
-            {'Load': context.data.nodedf['load']},
+            {'Load': scale * pd.to_numeric(context.data.nodedf['load'], errors='coerce').fillna(0.0)},
             index=context.data.nodedf.index,
         )
         return
 
     if os.path.exists(defaults.load_file):
         context.data.load = _read_csv_auto(defaults.load_file).set_index('Node')
+        if 'Load' in context.data.load.columns:
+            context.data.load['Load'] = scale * pd.to_numeric(context.data.load['Load'], errors='coerce').fillna(0.0)
     else:
         context.data.load = pd.DataFrame({'Load': 0.0}, index=context.data.nodedf.index)

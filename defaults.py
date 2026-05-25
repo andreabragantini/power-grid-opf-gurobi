@@ -20,6 +20,7 @@ load_file = ''
 
 # Value of lost load placeholder for future formulations.
 VOLL = 1000
+LOAD_SCALER = float(os.getenv('OPF_LOAD_SCALER', '1.0'))
 DEFAULT_SBASE = 100.0
 
 
@@ -30,6 +31,8 @@ def refresh_from_env():
 
 	DATA_ROOT = os.getenv('OPF_DATA_ROOT', 'data')
 	CASE_NAME = os.getenv('OPF_CASE_NAME', 'IEEE_3bus')
+	global LOAD_SCALER
+	LOAD_SCALER = float(os.getenv('OPF_LOAD_SCALER', '1.0'))
 
 	filepath = os.path.join(DATA_ROOT, CASE_NAME)
 	nodefile = os.path.join(filepath, 'buses.csv')

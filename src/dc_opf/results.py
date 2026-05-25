@@ -2,6 +2,8 @@
 
 import pandas as pd
 
+import defaults
+
 
 STATUS_LABELS = {
     2: 'Converged (Optimal)',
@@ -79,5 +81,6 @@ def build_results(context):
         'total_load_mw': total_load_mw,
         'total_generation_capacity_mw': total_capacity_mw,
         'capacity_margin_mw': capacity_margin_mw,
+        'load_scaler': defaults.LOAD_SCALER,
         'likely_issue': likely_issue,
     }

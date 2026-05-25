@@ -33,7 +33,7 @@ def run_case(case_name):
 
 def main():
     """Execute the default sequence from micro to larger systems."""
-    for case in ['IEEE_3bus', 'custom_6bus', 'IEEE_118bus']:
+    for case in ['IEEE_3bus', 'custom_6bus', 'IEEE_118bus', 'ZUG_1600bus']:
         run_case(case)
 
 

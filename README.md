@@ -91,6 +91,14 @@ $env:OPF_FORMULATION = "dc_opf"
 python main.py
 ```
 
+Optional load scaling knob (DC OPF):
+
+```bash
+# Global multiplier applied to all node loads before optimization.
+# 1.0 means 100%, 0.9 means 90%, etc.
+$env:OPF_LOAD_SCALER = "1.0"
+```
+
 Available case folders currently include:
 
 - IEEE_3bus
