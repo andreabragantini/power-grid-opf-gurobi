@@ -1,0 +1,4 @@
+ID,origin,Pmin,Pmax,Qmin,Qmax,lincost
+g1,n1,0,100,-100,100,18
+g2,n2,0,50,-50,50,20
+g3,n3,0,50,-50,50,24

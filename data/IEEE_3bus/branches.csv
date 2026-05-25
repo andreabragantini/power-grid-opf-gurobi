@@ -1,0 +1,4 @@
+ID,fromNode,toNode,Alimit,type,BR_R_PU,BR_X_PU
+l1,n1,n2,250,AC,0.166,0.068
+l2,n1,n3,250,AC,0.446,0.071
+l3,n2,n3,250,AC,0.322,0.074
