@@ -1,10 +1,42 @@
 # power-grid-opf-gurobi
 
-Modular Optimal Power Flow (OPF) framework for power grids using Gurobi. The code implements DC OPF and related formulations for benchmarking, research, and analysis of dispatch, congestion, losses, and voltage behavior in distribution networks.
+Modular Optimal Power Flow (OPF) framework for power grids using Gurobi.
+
+This repository is being evolved from an academic prototype into a clean, extensible research and engineering framework. The current implemented formulation is DC OPF, with architecture in place for additional formulations.
+
+## Implemented and planned formulations
+
+- Implemented: DC OPF
+- Planned: AC LP lossless OPF
+- Planned: AC LP active-loss OPF
+- Planned: AC LP active/reactive-loss OPF
+- Planned: Forward-Backward Sweep OPF
+
+## Repository structure
+
+```text
+power-grid-opf-gurobi/
+├── data/
+├── src/
+│   ├── common/
+│   ├── dc_opf/
+│   ├── ac_lp_lossless/
+│   ├── ac_lp_losses_p/
+│   ├── ac_lp_losses_pq/
+│   └── fbs_opf/
+├── docs/
+├── examples/
+├── benchmarks/
+├── notebooks/
+├── main.py
+└── requirements.txt
+```
 
 ## Reproducible setup
 
-This repository has been developed in a local conda environment named with Python 3.10.
+## Reproducible setup
+
+This repository has been developed in a local conda environment with Python 3.10.
 
 ### 1. Create and activate the environment
 
@@ -43,8 +75,44 @@ python -m pip install -r requirements.txt
 python main.py
 ```
 
+### 5. Select case and formulation
+
+The runtime supports case and formulation selection via environment variables.
+
+```bash
+# Windows PowerShell example
+$env:OPF_CASE_NAME = "IEEE_3bus"
+$env:OPF_FORMULATION = "dc_opf"
+python main.py
+```
+
+Available case folders currently include:
+
+- IEEE_3bus
+- custom_6bus
+- IEEE_118bus
+- ZUG_1600bus
+
+## Data conventions
+
+Each case folder under `data/` should provide:
+
+- `buses.csv`
+- `branches.csv`
+- `generators.csv`
+- optional `windfarms.csv`
+- optional `other.csv` (for `BaseMVA`)
+
+The loader supports harmonized aliases across custom and MATPOWER-style exports.
+
+## Documentation
+
+- Architecture notes: `docs/architecture.md`
+- Example runner: `examples/run_cases.py`
+- Benchmark notes: `benchmarks/README.md`
+
 ## Notes
 
-- The code expects the data files in `DataInput/`.
+- The default case is `IEEE_3bus`; change it via `OPF_CASE_NAME`.
 - If Gurobi changes behavior in a future release, the solver package version may need to be adjusted as well.
-- The repository now uses the current pandas and gurobipy APIs so it can run under the selected conda environment without local code changes.
+- The architecture now uses a formulation registry so new OPF variants can be added without rewriting the entrypoint.

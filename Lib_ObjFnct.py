@@ -1,23 +1,13 @@
 # -*- coding: utf-8 -*-
+"""Legacy objective builder wrapper.
+
+The active implementation lives in src.dc_opf.objective.
 """
-Created on Sat Oct 01 13:37:04 2016
 
-Library of Objective Functions
-
-@author: stde
-"""
-import gurobipy as gb
+from src.dc_opf.objective import build_objective as _build_objective
 
 
- # Objective Function - OPF        
-def build_objective_OPF(self):        
-    
-    generators = self.data.generators
-    gendata = self.data.generatorinfo   
-
-    m = self.model
-           
-    m.setObjective(
-        gb.quicksum(gendata.lincost[i]*self.variables.Pgen[i] for i in generators),        
-        gb.GRB.MINIMIZE)
+def build_objective_OPF(self):
+    """Build DC OPF objective through the modular implementation."""
+    _build_objective(self)
         

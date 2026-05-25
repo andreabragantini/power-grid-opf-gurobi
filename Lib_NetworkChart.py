@@ -1,19 +1,12 @@
 # -*- coding: utf-8 -*-
+"""Legacy chart builder wrapper.
+
+The active implementation lives in src.dc_opf.chart.
 """
-Created on Fri May  3 17:48:40 2019
 
-@author: andrbrag
-"""
+from src.dc_opf.chart import build_network_chart
 
-
-import plotly
-import plotly.graph_objs as go
-import matplotlib.pyplot as plt
-
-import networkx as nx
 
 def build_networkchart(self):
-    G = nx.Graph()
-    G.add_nodes_from(self.data.nodes)
-    G.add_edges_from(self.data.lineorder)
-    nx.draw(G, with_labels=True)
+    """Build a network chart through the modular implementation."""
+    build_network_chart(self)
