@@ -20,13 +20,15 @@ def run_case(case_name):
     os.environ['OPF_CASE_NAME'] = case_name
     os.environ['OPF_FORMULATION'] = 'dc_opf'
 
-    model = run(formulation_name='dc_opf', build_chart=False)
+    model = run(formulation_name='dc_opf')
     metadata = getattr(model.results, 'metadata', {})
+    outputs = getattr(model.results, 'output_paths', {})
     print('case={0}, status={1}, objective={2}'.format(
         case_name,
         metadata.get('status'),
         metadata.get('objective_value'),
     ))
+    print('results index: {0}'.format(outputs.get('index_html')))
 
 
 def main():

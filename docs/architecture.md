@@ -14,6 +14,7 @@ This repository is organized to keep OPF math transparent while enabling increme
 ## Layers
 
 - `src/common`: shared context objects and data loading/harmonization
+- `src/common/output_manager.py`: run artifact persistence and KPI history tracking
 - `src/dc_opf`: variables, constraints, objective, results, chart, model
 - `src/formulation_registry.py`: formulation factory used by `main.py`
 

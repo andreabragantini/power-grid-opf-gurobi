@@ -26,7 +26,7 @@ def create_model(formulation_name=None):
     formulation = (formulation_name or os.getenv('OPF_FORMULATION', 'dc_opf')).strip().lower()
 
     if formulation == 'dc_opf':
-        return DCOPFModel()
+        return DCOPFModel(formulation_name=formulation)
 
     if formulation in {
         'ac_lp_lossless',

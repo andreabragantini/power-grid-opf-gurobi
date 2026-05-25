@@ -111,6 +111,24 @@ The loader supports harmonized aliases across custom and MATPOWER-style exports.
 - Example runner: `examples/run_cases.py`
 - Benchmark notes: `benchmarks/README.md`
 
+## Result consultation workflow
+
+Simulation outputs are now saved under `outputs/` for quick inspection.
+
+Per run, the repository writes:
+
+- `outputs/<case>/<formulation>/<run_id>/index.html` (landing page)
+- `outputs/<case>/<formulation>/<run_id>/tables/*.csv` (result tables)
+- `outputs/<case>/<formulation>/<run_id>/plots/network_assets.html`
+- `outputs/<case>/<formulation>/<run_id>/plots/network_results_heatmap.html`
+- `outputs/<case>/<formulation>/<run_id>/kpis.csv`
+
+Cross-run KPI tracking is appended to:
+
+- `outputs/kpi_history.csv`
+
+This enables case-to-case comparison and benchmark baselining without parsing console logs.
+
 ## Notes
 
 - The default case is `IEEE_3bus`; change it via `OPF_CASE_NAME`.
