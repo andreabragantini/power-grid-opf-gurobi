@@ -19,7 +19,8 @@ other_file = ''
 load_file = ''
 
 # Value of lost load placeholder for future formulations.
-VOLL = 1000
+#VOLL = 1000
+
 LOAD_SCALER = float(os.getenv('OPF_LOAD_SCALER', '1.0'))
 DEFAULT_SBASE = 100.0
 

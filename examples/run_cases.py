@@ -3,6 +3,7 @@
 This script is intentionally lightweight and useful during refactoring.
 """
 
+import argparse
 import os
 import sys
 from pathlib import Path
@@ -15,12 +16,12 @@ if str(REPO_ROOT) not in sys.path:
 from main import run
 
 
-def run_case(case_name):
+def run_case(case_name, formulation_name='dc_opf'):
     """Run DC OPF for one dataset case and print a short summary."""
     os.environ['OPF_CASE_NAME'] = case_name
-    os.environ['OPF_FORMULATION'] = 'dc_opf'
+    os.environ['OPF_FORMULATION'] = formulation_name
 
-    model = run(formulation_name='dc_opf')
+    model = run(formulation_name=formulation_name)
     metadata = getattr(model.results, 'metadata', {})
     outputs = getattr(model.results, 'output_paths', {})
     print('case={0}, status={1}, objective={2}'.format(
@@ -31,11 +32,15 @@ def run_case(case_name):
     print('results index: {0}'.format(outputs.get('index_html')))
 
 
-def main():
+def main(formulation_name='dc_opf'):
     """Execute the default sequence from micro to larger systems."""
     for case in ['IEEE_3bus', 'custom_6bus', 'IEEE_118bus', 'ZUG_1600bus']:
-        run_case(case)
+        run_case(case, formulation_name=formulation_name)
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Run OPF smoke-test sequence across default cases.')
+    parser.add_argument('--formulation', default=os.getenv('OPF_FORMULATION', 'dc_opf'))
+    args = parser.parse_args()
+
+    main(formulation_name=args.formulation)
