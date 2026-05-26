@@ -6,6 +6,7 @@ new OPF variants without rewriting orchestration code.
 
 import os
 
+from src.ac_lp_lossless.model import ACLPLosslessModel
 from src.dc_opf.model import DCOPFModel
 
 
@@ -28,8 +29,10 @@ def create_model(formulation_name=None):
     if formulation == 'dc_opf':
         return DCOPFModel(formulation_name=formulation)
 
+    if formulation == 'ac_lp_lossless':
+        return ACLPLosslessModel(formulation_name=formulation)
+
     if formulation in {
-        'ac_lp_lossless',
         'ac_lp_losses_p',
         'ac_lp_losses_pq',
         'fbs_opf',

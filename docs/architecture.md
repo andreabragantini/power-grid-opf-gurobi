@@ -4,9 +4,10 @@ This repository is organized to keep OPF math transparent while enabling increme
 
 ## Current status
 
-- Implemented formulation: DC OPF (`src/dc_opf`)
+- Implemented formulations:
+  - DC OPF (`src/dc_opf`)
+  - AC LP Lossless OPF (`src/ac_lp_lossless`)
 - Planned formulations (placeholders created):
-  - `src/ac_lp_lossless`
   - `src/ac_lp_losses_p`
   - `src/ac_lp_losses_pq`
   - `src/fbs_opf`

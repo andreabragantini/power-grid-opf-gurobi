@@ -1,1 +1,5 @@
-"""Placeholder package for AC LP lossless OPF formulation."""
+"""AC LP lossless OPF formulation package."""
+
+from src.ac_lp_lossless.model import ACLPLosslessModel
+
+__all__ = ['ACLPLosslessModel']

@@ -55,6 +55,17 @@ def _write_table(df, path):
     df.to_csv(path, index=True)
 
 
+def _maybe_write_table(context, attr_name, filename, label, paths):
+    """Write table when a results DataFrame exists and is not None."""
+    table = getattr(context.results, attr_name, None)
+    if table is None:
+        return None
+
+    output_path = paths['tables_dir'] / filename
+    _write_table(table, output_path)
+    return {'filename': filename, 'label': label}
+
+
 def compute_kpis(context, formulation_name):
     """Compute simulation KPI values for fast cross-case comparison."""
     total_gen = float(pd.to_numeric(context.results.p_gen['p_gen_mw'], errors='coerce').fillna(0.0).sum()) if not context.results.p_gen.empty else 0.0
@@ -88,19 +99,30 @@ def compute_kpis(context, formulation_name):
 
 def save_results_bundle(context, formulation_name, paths, plot_paths):
     """Persist tables, KPI files, and run index for one OPF simulation."""
-    _write_table(context.results.p_gen, paths['tables_dir'] / 'p_gen.csv')
-    _write_table(context.results.p_wind, paths['tables_dir'] / 'p_wind.csv')
-    _write_table(context.results.p_line, paths['tables_dir'] / 'p_line.csv')
-    _write_table(context.results.theta, paths['tables_dir'] / 'theta.csv')
+    table_links = []
+
+    for attr_name, filename, label in [
+        ('p_gen', 'p_gen.csv', 'Generator dispatch table'),
+        ('q_gen', 'q_gen.csv', 'Generator reactive dispatch table'),
+        ('p_wind', 'p_wind.csv', 'Wind dispatch table'),
+        ('q_wind', 'q_wind.csv', 'Wind reactive dispatch table'),
+        ('p_line', 'p_line.csv', 'Line active flow table'),
+        ('q_line', 'q_line.csv', 'Line reactive flow table'),
+        ('theta', 'theta.csv', 'Voltage angle table'),
+        ('voltage', 'voltage.csv', 'Voltage magnitude table'),
+    ]:
+        table_link = _maybe_write_table(context, attr_name, filename, label, paths)
+        if table_link is not None:
+            table_links.append(table_link)
 
     kpis = compute_kpis(context, formulation_name)
     kpi_df = pd.DataFrame([kpis])
     kpi_df.to_csv(paths['run_dir'] / 'kpis.csv', index=False)
 
-    _write_run_index(paths, kpis, plot_paths)
+    _write_run_index(paths, kpis, plot_paths, table_links)
 
 
-def _write_run_index(paths, kpis, plot_paths):
+def _write_run_index(paths, kpis, plot_paths, table_links):
     """Write an HTML landing page for quick artifact inspection."""
     index_path = paths['run_dir'] / 'index.html'
 
@@ -112,6 +134,10 @@ def _write_run_index(paths, kpis, plot_paths):
     status_label = kpis.get('status_label', kpis.get('status'))
     converged_text = 'YES' if kpis.get('converged') else 'NO'
     likely_issue = kpis.get('likely_issue') or 'No additional diagnostic message.'
+    table_links_html = '\n'.join(
+        '<a href="tables/{0}">{1}</a>'.format(item['filename'], item['label'])
+        for item in table_links
+    )
 
     content = """<!doctype html>
 <html>
@@ -138,10 +164,7 @@ def _write_run_index(paths, kpis, plot_paths):
         </tbody>
     </table>
   <div class=\"links\">
-        <a href=\"tables/p_gen.csv\">Generator dispatch table</a>
-        <a href=\"tables/p_wind.csv\">Wind dispatch table</a>
-        <a href=\"tables/p_line.csv\">Line flow table</a>
-        <a href=\"tables/theta.csv\">Voltage angle table</a>
+        {table_links_html}
     <a href=\"{assets_plot}\">Network connectivity plot</a>
     <a href=\"{heatmap_plot}\">Network OPF heatmap plot</a>
   </div>
@@ -157,6 +180,7 @@ def _write_run_index(paths, kpis, plot_paths):
     converged_text=converged_text,
     status_label=status_label,
     likely_issue=likely_issue,
+        table_links_html=table_links_html,
         assets_plot=plot_paths['assets_plot'].name,
         heatmap_plot=plot_paths['heatmap_plot'].name,
         rows=rows_html,

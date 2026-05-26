@@ -4,6 +4,7 @@ This module converts heterogeneous CSV schemas into a canonical internal
 representation used by formulation builders.
 """
 
+import math
 import os
 from collections import defaultdict
 
@@ -78,6 +79,9 @@ def load_network_data(context):
     node_name_col = _first_existing_column(raw_nodedf, ['name', 'Bus_Name'], 'buses.csv', required=False)
     bus_type_col = _first_existing_column(raw_nodedf, ['Bus_Type'], 'buses.csv', required=False)
     p_load_col = _first_existing_column(raw_nodedf, ['load', 'LoadP', 'PD_MW'], 'buses.csv', required=False)
+    q_load_col = _first_existing_column(raw_nodedf, ['LoadQ', 'QD_MVar'], 'buses.csv', required=False)
+    vmax_col = _first_existing_column(raw_nodedf, ['Vmax'], 'buses.csv', required=False)
+    vmin_col = _first_existing_column(raw_nodedf, ['Vmin'], 'buses.csv', required=False)
 
     nodedf = raw_nodedf.copy()
     nodedf['name'] = nodedf[node_name_col] if node_name_col is not None else nodedf[node_id_col]
@@ -89,6 +93,11 @@ def load_network_data(context):
             nodedf.loc[nodedf.index[0], 'Bus_Type'] = 3
 
     nodedf['load'] = nodedf[p_load_col] if p_load_col is not None else 0.0
+    nodedf['load_q'] = nodedf[q_load_col] if q_load_col is not None else 0.0
+    # When a case does not provide explicit voltage limits, use a wide fallback
+    # instead of a tight default so the legacy AC LP formulation can remain feasible.
+    nodedf['Vmax'] = nodedf[vmax_col] if vmax_col is not None else 2.0
+    nodedf['Vmin'] = nodedf[vmin_col] if vmin_col is not None else 0.0
 
     nodedf = nodedf.rename(columns={node_id_col: 'ID'})
     context.data.nodedf = nodedf.set_index('ID')
@@ -99,6 +108,8 @@ def load_network_data(context):
     limit_col = _first_existing_column(raw_linedf, ['limit', 'Alimit', 'RateA_MVA'], 'branches.csv', required=False)
     type_col = _first_existing_column(raw_linedf, ['type'], 'branches.csv', required=False)
     b_col = _first_existing_column(raw_linedf, ['B'], 'branches.csv', required=False)
+    g_col = _first_existing_column(raw_linedf, ['G'], 'branches.csv', required=False)
+    r_col = _first_existing_column(raw_linedf, ['BR_R_PU'], 'branches.csv', required=False)
     x_col = _first_existing_column(raw_linedf, ['BR_X_PU'], 'branches.csv', required=False)
 
     linedf = raw_linedf.copy()
@@ -116,6 +127,21 @@ def load_network_data(context):
     else:
         raise ValueError('branches.csv requires either B or BR_X_PU column')
 
+    if g_col is not None:
+        linedf['G'] = linedf[g_col]
+    elif r_col is not None and x_col is not None:
+        r_series = pd.to_numeric(linedf[r_col], errors='coerce').fillna(0.0)
+        x_series = pd.to_numeric(linedf[x_col], errors='coerce').fillna(0.0)
+        denom = (r_series * r_series + x_series * x_series).replace(0.0, pd.NA)
+        linedf['G'] = (r_series / denom).fillna(0.0)
+
+        # Use positive susceptance magnitude for the LP linearization terms.
+        # This matches the legacy implementation convention used in this repo.
+        if b_col is None:
+            linedf['B'] = (x_series / denom).fillna(0.0)
+    else:
+        linedf['G'] = 0.0
+
     context.data.linedf = linedf.set_index(['fromNode', 'toNode'])
 
     context.data.nodeorder = context.data.nodedf.index.tolist()
@@ -129,6 +155,8 @@ def load_network_data(context):
 
     context.data.linelimit = {k: zero_to_inf(v) for k, v in context.data.linelimit.items()}
     context.data.lineadmittance = context.data.linedf['B'].to_dict()
+    context.data.G = context.data.linedf['G'].to_dict()
+    context.data.B = context.data.linedf['B'].to_dict()
 
     context.data.nodes = context.data.nodeorder
     context.data.nodetooutlines = defaultdict(list)
@@ -145,6 +173,7 @@ def load_network_data(context):
     context.data.AC_lines = [line for line, line_type in zip(context.data.lineorder, line_types) if line_type == 'AC']
 
     context.data.Sbase = _read_optional_base_mva()
+    context.data.Aq = math.sqrt(2.0) - 1.0
     context.data.case_name = defaults.CASE_NAME
 
 
@@ -154,6 +183,9 @@ def load_generator_data(context):
     gen_id_col = _first_existing_column(raw_gendf, ['ID'], 'generators.csv', required=False)
     origin_col = _first_existing_column(raw_gendf, ['origin', 'Gen_Bus'], 'generators.csv')
     pmax_col = _first_existing_column(raw_gendf, ['Pmax', 'Pmax_MW'], 'generators.csv')
+    pmin_col = _first_existing_column(raw_gendf, ['Pmin', 'Pmin_MW'], 'generators.csv', required=False)
+    qmax_col = _first_existing_column(raw_gendf, ['Qmax', 'Qmax_MVar'], 'generators.csv', required=False)
+    qmin_col = _first_existing_column(raw_gendf, ['Qmin', 'Qmin_MVar'], 'generators.csv', required=False)
     lincost_col = _first_existing_column(raw_gendf, ['lincost', 'CostCoeff_1'], 'generators.csv', required=False)
 
     gendf = raw_gendf.copy()
@@ -163,6 +195,9 @@ def load_generator_data(context):
 
     gendf['origin'] = gendf[origin_col]
     gendf['capacity'] = gendf[pmax_col]
+    gendf['pmin'] = gendf[pmin_col] if pmin_col is not None else 0.0
+    gendf['Qmax'] = gendf[qmax_col] if qmax_col is not None else gendf['capacity']
+    gendf['Qmin'] = gendf[qmin_col] if qmin_col is not None else -gendf['capacity']
     gendf['lincost'] = gendf[lincost_col] if lincost_col is not None else 0.0
 
     context.data.generatorinfo = gendf.set_index(gen_id_col)
@@ -209,7 +244,10 @@ def load_nodal_demand_data(context):
 
     if 'load' in context.data.nodedf.columns:
         context.data.load = pd.DataFrame(
-            {'Load': scale * pd.to_numeric(context.data.nodedf['load'], errors='coerce').fillna(0.0)},
+            {
+                'Load': scale * pd.to_numeric(context.data.nodedf['load'], errors='coerce').fillna(0.0),
+                'LoadQ': scale * pd.to_numeric(context.data.nodedf.get('load_q', 0.0), errors='coerce').fillna(0.0),
+            },
             index=context.data.nodedf.index,
         )
         return
@@ -218,5 +256,8 @@ def load_nodal_demand_data(context):
         context.data.load = _read_csv_auto(defaults.load_file).set_index('Node')
         if 'Load' in context.data.load.columns:
             context.data.load['Load'] = scale * pd.to_numeric(context.data.load['Load'], errors='coerce').fillna(0.0)
+        if 'LoadQ' not in context.data.load.columns:
+            context.data.load['LoadQ'] = 0.0
+        context.data.load['LoadQ'] = scale * pd.to_numeric(context.data.load['LoadQ'], errors='coerce').fillna(0.0)
     else:
-        context.data.load = pd.DataFrame({'Load': 0.0}, index=context.data.nodedf.index)
+        context.data.load = pd.DataFrame({'Load': 0.0, 'LoadQ': 0.0}, index=context.data.nodedf.index)
